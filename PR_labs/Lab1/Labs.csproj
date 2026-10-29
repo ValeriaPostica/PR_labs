@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Labs</RootNamespace>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <!-- Runtime settings that keep the measurements of the labs stable. -->
+    <PropertyGroup>
+        <!-- Workstation GC: one heap, no extra GC threads per core competing with our threads. -->
+        <ServerGarbageCollection>false</ServerGarbageCollection>
+        <!-- No background GC thread running next to the measured threads. -->
+        <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+        <!-- Methods are compiled fully optimised at once, so short runs are not measured
+             partly in unoptimised (tier-0) code. -->
+        <TieredCompilation>false</TieredCompilation>
+    </PropertyGroup>
+
+</Project>
