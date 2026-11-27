@@ -51,6 +51,8 @@ def run_client(host, port, role):
             if message is None:
                 print("\nServer disconnected.", flush=True)
                 break
+            if message == "PONG":
+                continue
             print(f"\n{message}", flush=True)
             if message == "BYE":
                 break

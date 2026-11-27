@@ -9,6 +9,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
+from ipaddress import IPv4Address
 
 from cryptography.exceptions import InvalidTag
 
@@ -49,29 +50,32 @@ def read_keyboard(commands):
 
 
 class Chat:
-    def __init__(self, name, port, cipher, multicast, direct):
+    def __init__(self, name, port, cipher, shared, direct, broadcast=None):
         self.name = name
         self.session = uuid.uuid4().hex
-        self.group = (GROUP, port)
+        self.lan_endpoint = (str(broadcast) if broadcast is not None else GROUP, port)
         self.cipher = cipher
-        self.multicast = multicast
+        self.shared = shared
         self.direct = direct
         self.peers = {}
         self.joined = False
 
-        multicast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        shared.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if hasattr(socket, "SO_REUSEPORT"):
-            multicast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        multicast.bind(("0.0.0.0", port))
-        membership = socket.inet_aton(GROUP) + socket.inet_aton("0.0.0.0")
-        multicast.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, membership)
+            shared.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        shared.bind(("0.0.0.0", port))
 
         direct.bind(("0.0.0.0", 0))
-        direct.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 1)
-        direct.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+        if broadcast is None:
+            membership = socket.inet_aton(GROUP) + socket.inet_aton("0.0.0.0")
+            shared.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, membership)
+            direct.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 1)
+            direct.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+        else:
+            direct.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     def send(self, kind, endpoint=None, text="", recipient=None):
-        endpoint = endpoint or self.group
+        endpoint = endpoint or self.lan_endpoint
         data = encode(Packet(kind, self.name, self.session, text), self.cipher, recipient)
         try:
             self.direct.sendto(data, endpoint)
@@ -136,7 +140,7 @@ class Chat:
         print(f"* {name} left the chat")
 
     def listen(self, timeout):
-        ready, _, _ = select.select([self.multicast, self.direct], [], [], timeout)
+        ready, _, _ = select.select([self.shared, self.direct], [], [], timeout)
         for sock in ready:
             self.receive(sock)
 
@@ -177,7 +181,7 @@ class Chat:
         self.joined = True
         try:
             self.send("alive")
-            print(f"Joined as {self.name} on port {self.group[1]}.")
+            print(f"Joined as {self.name} on port {self.lan_endpoint[1]}.")
             next_heartbeat = time.monotonic() + HEARTBEAT_INTERVAL
             commands = queue.SimpleQueue()
             threading.Thread(target=read_keyboard, args=(commands,), daemon=True).start()
@@ -208,6 +212,8 @@ def main():
     parser.add_argument("name", help="unique chat name")
     parser.add_argument("port", type=int, help="shared UDP port")
     parser.add_argument("passphrase", help="shared secret for private messages")
+    parser.add_argument("--broadcast", type=IPv4Address, metavar="ADDRESS",
+                        help="subnet broadcast address for discovery and the general channel")
     args = parser.parse_args()
     if not valid_name(args.name):
         parser.error("name must be 1 to 64 printable characters without spaces")
@@ -222,10 +228,10 @@ def main():
     try:
         cipher = make_cipher(args.passphrase, args.port)
         with (
-            socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as multicast,
+            socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as shared,
             socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as direct,
         ):
-            Chat(args.name, args.port, cipher, multicast, direct).run()
+            Chat(args.name, args.port, cipher, shared, direct, args.broadcast).run()
     except NameTaken:
         print(f"The name {args.name} is already in use.", file=sys.stderr)
         return 1

@@ -164,9 +164,9 @@ python3 client.py 192.168.1.20 5000 provider
 Choose one location. The implementation permits one provider connection at a
 time. A second provider receives `ERROR A provider is already connected.`
 
-Clients and providers automatically exchange heartbeats. A `PONG` line every
-five seconds is normal. Messages may interrupt the visual `> ` prompt while you
-are typing; the keyboard remains active.
+Clients and providers send a heartbeat every 15 seconds and handle `PONG` replies
+silently. Order updates and stock alerts can appear while you are typing. The
+keyboard remains active.
 
 ## 6. Demonstrate the menu and an order — Task 1
 
@@ -420,7 +420,6 @@ be ready to explain the code and answer the PDF's questions.
 | A second provider is rejected | Type `quit` in the first provider before starting a replacement |
 | An order is refused unexpectedly | Read `menu`; other clients may have reserved stock, or the server may have restarted |
 | Ready takes longer than the displayed preparation time | The order may be waiting for a free worker |
-| `PONG` interrupts the prompt | Normal heartbeat output; continue typing or retype the command if needed |
 
 ### Test the port from Device B
 

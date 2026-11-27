@@ -1,7 +1,7 @@
 """One UTF-8 text message per line."""
 
 MAX_MESSAGE_SIZE = 4096
-HEARTBEAT_INTERVAL = 5
+HEARTBEAT_INTERVAL = 15
 CONNECTION_TIMEOUT = 30
 PREPARATION_TIMES = {"coffee": 4, "tea": 3, "croissant": 2}
 

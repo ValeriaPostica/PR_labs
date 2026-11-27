@@ -79,7 +79,8 @@ UTF-8, oversized lines, incomplete messages and invalid handshakes get an error
 and close that connection. Other clients continue normally.
 
 The keyboard runs in a daemon thread while the main thread receives messages.
-A heartbeat thread sends `PING` every 5 seconds; the server answers `PONG`.
+A heartbeat thread sends `PING` every 15 seconds. The console handles the server's
+`PONG` reply silently.
 Socket operations time out after 30 seconds, allowing silent network failures to
 be detected. EOF or a reset usually reveals a closed/killed peer immediately.
 Consoles exit on server disconnection without waiting for keyboard input.

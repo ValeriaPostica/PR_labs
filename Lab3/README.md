@@ -23,6 +23,14 @@ python chat.py Ion   5000 'lab-demo-passphrase'
 python chat.py Maria 5000 'lab-demo-passphrase'
 ```
 
+If UDP multicast is filtered but the network passes broadcasts, add `--broadcast`
+with the subnet broadcast address to every peer's command. For example, on a
+hotspot using `172.20.10.0/28`:
+
+```bash
+python chat.py Ana 5000 'lab-demo-passphrase' --broadcast 172.20.10.15
+```
+
 | Input | What it does |
 | --- | --- |
 | `Hello everyone` | Sends to the general channel |
@@ -38,10 +46,10 @@ Messages can contain up to 500 characters. Each process writes a `chat-<pid>.log
 
 | Socket | Role |
 | --- | --- |
-| Shared port on `0.0.0.0` | Receives messages for `239.255.42.99`. Multicast loopback gives the sender one copy of its general message. |
+| Shared port on `0.0.0.0` | Receives the discovery and general-channel datagrams sent to `239.255.42.99` or the configured subnet broadcast address. |
 | OS-assigned port on `0.0.0.0` | Sends every datagram and receives direct discovery replies and private messages. Peers learn this endpoint from the sender address returned by `recvfrom`. |
 
-A new peer multicasts a discovery probe and listens for direct replies for one second before announcing itself. An existing peer keeps its name. If two peers claim the same name during discovery, the smaller session ID wins. Each peer announces its presence every five seconds. A goodbye removes it immediately upon receipt, and fifteen seconds of silence removes a peer whose goodbye did not arrive.
+A new peer sends a discovery probe to the LAN and listens for direct replies for one second before announcing itself. An existing peer keeps its name. If two peers claim the same name during discovery, the smaller session ID wins. Each peer announces its presence every five seconds. A goodbye removes it immediately upon receipt, and fifteen seconds of silence removes a peer whose goodbye did not arrive.
 
 The passphrase and chat port are used to derive a shared key with PBKDF2-HMAC-SHA256. Each private message uses AES-GCM with a fresh random nonce. The recipient checks the authentication tag before displaying the message. General messages remain readable on the network.
 
